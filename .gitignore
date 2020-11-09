@@ -1,0 +1,15 @@
+# Dtaa
+*.csv
+/slprj
+
+# Jupyter
+*__pycache__
+*.tags1
+*.ipynb_checkpoints
+debug.log
+
+# Simulations
+simulations/other_work/*
+simulations/deprecated_scripts/*
+simulations/deprecated_sims/*
+*.slxc
