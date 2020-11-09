@@ -1,0 +1,24 @@
+name: pytorch
+channels:
+        - defaults
+        - conda-forge
+        - pytorch
+        - fastai
+dependencies:
+        - jupyter
+        - jupyterlab
+        - ipywidgets
+        - pylint
+        - rope
+        - nodejs
+        - numpy
+        - scipy
+        - pytorch>=1.6
+        - torchvision
+        - fastai>=2.0
+        - wandb
+        - matplotlib
+        - graphql-core=2.0
+        - pip
+        - pip:
+                - pytorch-lightning
