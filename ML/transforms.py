@@ -4,36 +4,7 @@ from torchvision import datasets, transforms
 
 import torch
 
-# class NormalizeTS():
-#     def __init__(self, means, stds):
-#         self.means = means.unsqueeze(1)
-#         self.stds = stds.unsqueeze(1)
-#
-#     def __call__(self, x):
-#         return x.sub(self.means).div(self.stds)
-#
-# class Normalize():
-#     def __init__(self, means, stds):
-#         self.means = means
-#         self.stds = stds
-#
-#     def __call__(self, x):
-#         return x.sub(self.means).div(self.stds)
-
-class Normalize0D():
-    def __init__(self, means, stds):
-        self.tf = transforms.Normalize(means, stds)
-
-    def __call__(self, x):
-        return self.tf(x.unsqueeze(1).unsqueeze(2)).squeeze(2).squeeze(1)
-
-class Normalize1D():
-    def __init__(self, means, stds):
-        self.tf = transforms.Normalize(means, stds)
-
-    def __call__(self, x):
-        return self.tf(x.unsqueeze(2)).squeeze(2)
-
+# Rescale tensor to some range
 class Rescale():
     def __init__(self, lower, upper):
         self.lower = lower
@@ -44,6 +15,8 @@ class Rescale():
 
         return x.sub(self.lower).div(self.diff).sub(.5).mul(2)
 
+# Rescale PMU sensor data to some ranges
+# Accepts 6 ranges
 class RescalePMU():
     def __init__(self, lowers, uppers, num_sensors):
         self.lowers = torch.tensor(lowers * num_sensors).unsqueeze(1)
@@ -53,6 +26,7 @@ class RescalePMU():
     def __call__(self, x):
         return x.sub(self.lowers).div(self.diffs).sub(.5).mul(2)
 
+# Add white noise at some signal to noise ratio
 class AWGN():
     def __init__(self, snr):
         self.snr = snr
@@ -63,6 +37,7 @@ class AWGN():
         noise_amps = torch.sqrt(10 ** (noise_dbs / 10))
         return x + torch.randn(x.shape) * noise_amps.unsqueeze(1)
 
+# Random crop within a time series
 class RandomCropTS():
     def __init__(self, crop):
         self.crop = crop
@@ -71,16 +46,8 @@ class RandomCropTS():
         split = floor(random() * len(x) * self.crop)
         return torch.cat((x[:,split:], x[:,-1:].expand(-1, split)), 1)
 
-# Detrimental
-class RandomAmplify():
-    def __init__(self, amp):
-        self.amp = amp
-
-    def __call__(self, x):
-        for i in range(2, len(x), 3):
-            x[i] = x[i] * ((random() - 0.5) * 2 * self.amp + 1)
-        return x
-
+# Cutout some point of the timeseries
+# Simulates a drop in connection
 class CutoutTime():
     def __init__(self, pr, size):
         self.pr = pr
@@ -95,6 +62,8 @@ class CutoutTime():
 
         return x
 
+# Cutout a random channel
+# Simulates a drop in connection
 class CutoutChannel():
     def __init__(self, pr):
         self.pr = pr
@@ -105,27 +74,3 @@ class CutoutChannel():
                 x[i, :] = 0
 
         return x
-
-class TrueAngLoss():
-    def __init__(self, period):
-        self.period = period
-
-    def __call__(self, x, y):
-        loss = x.sub(y).abs()
-        return torch.mean(torch.min(loss, torch.sub(self.period, loss).abs())) / 2 * 360
-
-class L1AngLoss():
-    def __init__(self, period):
-        self.period = period
-
-    def __call__(self, x, y):
-        loss = x.sub(y).abs()
-        return torch.mean(torch.min(loss, torch.sub(self.period, loss).abs()))
-
-class L2AngLoss():
-    def __init__(self, period):
-        self.period = period
-
-    def __call__(self, x, y):
-        loss = x.sub(y)
-        return torch.mean(torch.min(loss.pow(2), torch.sub(self.period, loss).pow(2)))

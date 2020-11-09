@@ -6,7 +6,7 @@ from math import pi
 
 from ML.metrics import *
 
-
+# Function to detach hidden layers from the graph
 def repackage_hidden(h):
     if isinstance(h, torch.Tensor):
         return h.detach()
@@ -53,6 +53,7 @@ def validation(model, val_loader, loss_fns, device):
                     val_loss = loss_fn(outputs.squeeze(1), labels) # calculates val_loss from model predictions and true labels
                     running_loss[i] += val_loss.item()
 
+                # track metrics
                 if not first:
                     running_true += true_fn(outputs.squeeze(1), labels)
                 else:
@@ -61,36 +62,54 @@ def validation(model, val_loader, loss_fns, device):
 
                 pbar.update(1)
 
-        return [x / len(val_loader) for x in running_loss], running_true / len(val_loader) # return loss value, accuracy
+         # return loss value, accuracy
+        return [x / len(val_loader) for x in running_loss], running_true / len(val_loader)
+
+# Trainer for testing SensorRNN
+# Packages model and dataset, trains with the __call__ method taking the number of epochs
+# model: The model to test
+# dataset: The data to train with
+# device: The device to train on
+# split: train / valid split for training
+# bs: batch size
 
 class SensorTrainer():
     def __init__(self, model, dataset, device="cpu", split=.7, bs=64):
+        # Device and model
         self.device = device
-
         model.to(device)
         self.model = model
+
+        # Make loaders
         self.training_loader, self.validation_loader = self._make_loaders(dataset, bs, split)
 
-        self.loss_fn = L2AngLoss(2) # -1 -> 1
+        # Loss functions, optimisers and scheduler
+        self.loss_fn = L2AngLoss(2)
         self.metrics = [L1AngLoss(2), L2AngLoss(2)]
         self.optimizer = optim.Adam(model.parameters(), lr=8e-4)
         self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, .95, last_epoch=-1)
 
     def _make_loaders(self, dataset, bs, split):
+        # Find the split index
         split_idx = round(split * len(dataset))
         split_idx = split_idx - (split_idx % bs)
 
+        # Split up train and valid datasets
         train_ds, valid_ds = torch.utils.data.random_split(dataset, (split_idx, len(dataset) - split_idx))
 
+        # Make loaders
         training_loader = torch.utils.data.DataLoader(train_ds, batch_size=bs, shuffle=True)
         validation_loader = torch.utils.data.DataLoader(valid_ds, batch_size=bs, shuffle=False)
 
         return training_loader, validation_loader
 
     def __call__(self, epochs):
+        # Create arrays to track metrics
         trains = []
         l1s = []
         l2s = []
+
+        # also store l1 for each output
         breakdowns = []
 
 
@@ -100,14 +119,17 @@ class SensorTrainer():
             l1_loss, l2_loss = losses
             breakdown = true_loss.cpu().numpy()
 
+            # Track metrics
             breakdowns.append(breakdown)
             trains.append(train_loss)
             l1s.append(l1_loss)
             l2s.append(l2_loss)
 
+            # Exponential decay after 10 epochs
             if epoch > 10:
                 self.scheduler.step()
 
+            # Print status
             print("Epoch: {}/{}, Training Loss: {:.6f}, L2 Loss: {:.6f}, L1 Loss: {:.6f},\nAng Err Degrees: {:.4f}, Ang Err Rads: {:.4f}".format(epoch + 1, epochs, train_loss, l2_loss, l1_loss, l1_loss * 180, l1_loss * pi))
             print("Breakdown:", breakdown)
             print('-' * 20)

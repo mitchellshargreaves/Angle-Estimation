@@ -4,22 +4,19 @@ import torch
 from torch import nn, optim
 import torch.nn.functional as F
 
+# A fully connected layer packaged with batchnorm and dropout
 class FC(nn.Module):
     def __init__(self, in_feat, out_feat, bn=True, do=.1):
         super(FC, self).__init__()
         self.fc = nn.Linear(in_feat, out_feat)
-#         self.activ = nn.LeakyReLU(0.1)
         self.activ = nn.ReLU()
+        self.bn, self.do = None, None
 
         if bn:
             self.bn = nn.BatchNorm1d(out_feat)
-        else:
-            self.bn = None
 
         if do > 0:
             self.do = nn.Dropout(p=do)
-        else:
-            self.do = None
 
     def forward(self, x):
         x = self.fc(x)
@@ -29,6 +26,7 @@ class FC(nn.Module):
 
         return x
 
+# A sigmoid layer rescaled to some range
 class SigmoidRange(nn.Module):
     def __init__(self, high, low):
         super(SigmoidRange, self).__init__()
@@ -66,7 +64,7 @@ class Conv1D(nn.Module):
             x = self.activ(x)
         return x
 
-# ResNet Basic Block
+# ResNet Basic Block (1D)
 class BasicBlock1D(nn.Module):
     def __init__(self, in_planes, out_planes, downsample=False):
         super().__init__()
@@ -99,6 +97,7 @@ class BasicBlock1D(nn.Module):
 
         return out
 
+# Take the last channel
 class TakeLast(nn.Module):
     def __init__(self):
         super().__init__()
@@ -106,6 +105,7 @@ class TakeLast(nn.Module):
     def forward(self, x):
         return x[:,-1,:]
 
+# Pass the second input through, running the first through the layers
 class PassHidden(nn.Module):
     def __init__(self, layers):
         super().__init__()
@@ -115,7 +115,7 @@ class PassHidden(nn.Module):
         x, y = inputs
         return self.layers(x), y
 
-# https://www.kaggle.com/dannykliu/lstm-with-attention-clr-in-pytorch
+# Attention, adapted from: https://www.kaggle.com/dannykliu/lstm-with-attention-clr-in-pytorch
 class Attention(nn.Module):
     def __init__(self, hidden_size, batch_first=False):
         super(Attention, self).__init__()
