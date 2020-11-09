@@ -1,29 +1,16 @@
 close all; clear all; clc;
-sim_t = 0.6;
-dt = 5e-5;
-% num_sims = 16384 / 2;
-num_sims = 1024;
-num_loads = 10;
-% noise = 60;
+sim_t = 0.6; % length of simulation
+dt = 5e-5; % timestep
 
-% % Randomise R
-% R_min = .1;
-R_max = 1;
-% R = rand(num_sims, num_loads) * (R_max - R_min);
-% 
-% % Randomise C
-% C_min = 1e-3;
-% C_max = 1e-2;
-% C = rand(num_sims, num_loads) * (C_max - C_min) + C_min;
-% 
-% % Randomise L
-% L_min = 1e-3;
-L_max = 1e-2;
-% L = rand(num_sims, num_loads) * (L_max - L_min) + L_min;
+num_sims = 1024;
+num_loads = 10; % number of loads
 
 % Set RL
-R = ones(num_sims, num_loads) * R_max;
-L = ones(num_sims, num_loads) * L_max;
+R_val = 1;
+L_val = 1e-2;
+
+R = ones(num_sims, num_loads) * R_val;
+L = ones(num_sims, num_loads) * L_val;
 
 % Randomise P
 P_min = 500;
@@ -44,6 +31,7 @@ for i = 1 : num_sims
    in(i) = in(i).setVariable('L', L(i, :));
 end
 
+% Run simulation
 out = parsim(in, 'ShowProgress', 'on', 'ShowSimulationManager', 'on', 'TransferBaseWorkspaceVariables', 'on', 'StopOnError', 'on');
 
 % Visualise simulations
